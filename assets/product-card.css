@@ -174,11 +174,10 @@ h3.product-tile__title {
       padding: 2px 8px;
     }
 
+    /* Let RTB tags wrap to a second line instead of being clipped */
     .product-tile__tags {
-        flex-wrap: nowrap;
-        justify-content: flex-start;
-        overflow: auto;
-        scrollbar-width: none;
+        flex-wrap: wrap;
+        justify-content: center;
     }
   }
 
@@ -420,10 +419,8 @@ h3.product-tile__title {
           font-size: 10px;
       }
       .product-tile__tags {
-          flex-wrap: nowrap;
-          justify-content: flex-start;
-          overflow: auto;
-          scrollbar-width: none;
+          flex-wrap: wrap;
+          justify-content: center;
       }
       /* span.jdgm-prev-badge__stars span.jdgm-star {
           display: none !important;
