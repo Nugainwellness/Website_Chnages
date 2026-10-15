@@ -81,11 +81,95 @@
     }
   });
 })();
+
+/* ── Flavour change → swap the tile image and link to that variant ── */
+(function () {
+  if (window.ptileVariantMediaBound) return;
+  window.ptileVariantMediaBound = true;
+
+  document.addEventListener('change', function (e) {
+    var input = e.target.closest && e.target.closest('.product-tile [data-single-option-selector]');
+    if (!input) return;
+    var tile = input.closest('.product-tile');
+    var dataEl = tile.querySelector('[data-ptile-variant-media]');
+    if (!dataEl) return;
+    if (!tile.ptileVariants) {
+      try { tile.ptileVariants = JSON.parse(dataEl.textContent); } catch (err) { return; }
+    }
+
+    var scope = input.closest('.ptile-purchase') || tile;
+    var selected = {};
+    scope.querySelectorAll('[data-single-option-selector]').forEach(function (el) {
+      if (el.tagName === 'SELECT' || el.checked) selected[el.getAttribute('data-index')] = el.value;
+    });
+    var variant = tile.ptileVariants.find(function (v) {
+      return v.options.every(function (value, i) {
+        var picked = selected['option' + (i + 1)];
+        return picked === undefined || picked === value;
+      });
+    });
+    if (!variant) return;
+
+    if (variant.src) {
+      var primary = tile.querySelector('.product-tile__img--primary');
+      if (primary) {
+        primary.srcset = variant.srcset;
+        primary.src = variant.src;
+      }
+      var hover = tile.querySelector('.product-tile__img--hover');
+      if (hover) hover.style.display = 'none';
+    }
+
+    tile.querySelectorAll('.product-tile__link, .ptile-btn--dark').forEach(function (link) {
+      var url = new URL(link.getAttribute('href'), window.location.origin);
+      url.searchParams.set('variant', variant.id);
+      link.setAttribute('href', url.pathname + url.search);
+    });
+  });
+})();
 </script>
 {% assign product_tile_js_loaded = true %}
 {% endunless %}
 {%- if product and product != empty -%}
   <div class="product-tile {{ class }}" style="--accent: {{ accent_color }}; --tag-color: {{ tag_color }};">
+    {%- liquid
+      assign has_flavor_option = false
+      for option in product.options
+        assign option_lower = option | downcase
+        if option_lower contains 'flavour' or option_lower contains 'flavor' or option_lower contains 'taste'
+          assign has_flavor_option = true
+        endif
+      endfor
+    -%}
+    {%- if has_flavor_option -%}
+      <script type="application/json" data-ptile-variant-media>
+        [
+          {%- for variant in product.variants -%}
+            {%- liquid
+              assign v_src = null
+              assign v_srcset = ''
+              if variant.featured_media
+                assign v_src = variant.featured_media | image_url: width: 800
+                for w in (1..4)
+                  assign width = w | times: 200
+                  assign v_url = variant.featured_media | image_url: width: width
+                  assign v_srcset = v_srcset | append: v_url | append: ' ' | append: width | append: 'w'
+                  unless forloop.last
+                    assign v_srcset = v_srcset | append: ', '
+                  endunless
+                endfor
+              endif
+            -%}
+            {
+              "id": {{ variant.id | json }},
+              "options": {{ variant.options | json }},
+              "src": {{ v_src | json }},
+              "srcset": {{ v_srcset | json }}
+            }{% unless forloop.last %},{% endunless %}
+          {%- endfor -%}
+        ]
+      </script>
+    {%- endif -%}
     {%- if show_atc and first_variant.available -%}
       <data-island
         class="contents"

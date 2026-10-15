@@ -1923,8 +1923,8 @@
   {%- assign sticky_per = sticky_variant.price | divided_by: sticky_qty -%}
   <div class="nch__sticky-bar" data-nch-sticky>
     <div class="nch__sticky-thumb">
-      {%- if product.featured_image -%}
-        <img src="{{ product.featured_image | image_url: width: 160 }}" alt="{{ product.title }}" loading="lazy">
+      {%- if featured_media -%}
+        <img src="{{ featured_media | image_url: width: 160 }}" alt="{{ product.title }}" loading="lazy" data-nch-sticky-img>
       {%- endif -%}
     </div>
     <div class="nch__sticky-info">
@@ -1939,6 +1939,20 @@
 
   {%- comment -%} PhotoSwipe zoom popup {%- endcomment -%}
   {% render 'photoswipe' %}
+
+  {%- comment -%} Variant → image map, used to switch the gallery when the flavour changes {%- endcomment -%}
+  <script type="application/json" data-nch-variant-media>
+    [
+      {%- for variant in product.variants -%}
+        {
+          "id": {{ variant.id | json }},
+          "options": {{ variant.options | json }},
+          "media": {{ variant.featured_media.id | json }},
+          "thumb": {% if variant.featured_media %}{{ variant.featured_media | image_url: width: 160 | json }}{% else %}null{% endif %}
+        }{% unless forloop.last %},{% endunless %}
+      {%- endfor -%}
+    ]
+  </script>
 
 </data-island>
 
@@ -2023,11 +2037,17 @@
   var swiperEl = root.querySelector('[data-nch-swiper]');
   var mobileSwiper = null;
 
+  function activeMediaIndex() {
+    var active = root.querySelector('[data-nch-thumb].is-active');
+    return active ? parseInt(active.getAttribute('data-nch-thumb'), 10) : 0;
+  }
+
   function initMobileSwiper() {
     if (window.innerWidth <= 1023 && swiperEl && !mobileSwiper) {
       mobileSwiper = new Swiper(swiperEl, {
         slidesPerView: 1,
         spaceBetween: 12,
+        initialSlide: activeMediaIndex(),
         pagination: {
           el: swiperEl.querySelector('.swiper-pagination'),
           clickable: true
@@ -2045,6 +2065,53 @@
     initMobileSwiper();
   }
   window.addEventListener('resize', initMobileSwiper);
+
+  /* ────────────────────────────────────────────
+     Flavour change → show that variant's image
+  ──────────────────────────────────────────── */
+  var variantMediaEl = root.querySelector('[data-nch-variant-media]');
+  var variantMedia = [];
+  try { variantMedia = JSON.parse(variantMediaEl ? variantMediaEl.textContent : '[]'); } catch (err) {}
+  var purchaseEl = root.querySelector('[data-nch-purchase]');
+  var stickyImg = root.querySelector('[data-nch-sticky-img]');
+
+  function showMedia(mediaId) {
+    mediaId = String(mediaId);
+    var idx = -1;
+    thumbSlides.forEach(function(t) {
+      var isMatch = t.getAttribute('data-media-id') === mediaId;
+      t.classList.toggle('is-active', isMatch);
+      if (isMatch) idx = parseInt(t.getAttribute('data-nch-thumb'), 10);
+    });
+    if (idx < 0) return;
+    mainImages.forEach(function(img) {
+      img.style.display = (img.getAttribute('data-nch-img') === mediaId) ? '' : 'none';
+    });
+    if (thumbSwiper) thumbSwiper.slideTo(idx);
+    if (mobileSwiper) mobileSwiper.slideTo(idx);
+  }
+
+  function selectedOptions() {
+    var selected = [];
+    purchaseEl.querySelectorAll('[data-single-option-selector]').forEach(function(el) {
+      var pos = parseInt(el.getAttribute('data-position'), 10) - 1;
+      if (el.tagName === 'SELECT' || el.checked) selected[pos] = el.value;
+    });
+    return selected;
+  }
+
+  if (purchaseEl && variantMedia.length) {
+    purchaseEl.addEventListener('change', function(e) {
+      if (!e.target.closest('[data-single-option-selector]')) return;
+      var selected = selectedOptions();
+      var variant = variantMedia.find(function(v) {
+        return v.options.every(function(value, i) { return selected[i] === undefined || selected[i] === value; });
+      });
+      if (!variant || !variant.media) return;
+      showMedia(variant.media);
+      if (stickyImg && variant.thumb) stickyImg.src = variant.thumb;
+    });
+  }
 
   /* ────────────────────────────────────────────
      Subscribe tab → popup
