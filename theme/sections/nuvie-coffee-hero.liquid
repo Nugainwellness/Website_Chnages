@@ -1,0 +1,2197 @@
+{%- assign price_unit = product.type | remove: 'variety' | strip | default: 'bottle' -%}
+
+{%- liquid
+  assign current_variant = product.selected_or_first_available_variant
+  assign featured_media = current_variant.featured_media | default: product.featured_media
+  assign product_form_id = 'product-form-' | append: section.id
+
+  assign related_products = product.metafields.custom.sibling_products.value
+-%}
+
+{% style %}
+  /* ── BASE ── */
+  .nch {
+    font-family: "Poppins", sans-serif;
+    overflow: hidden;
+  }
+  .nch__container {
+    max-width: 1520px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  .nch__layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+
+  /* ── MEDIA WRAPPER ── */
+  .nch__media {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 12px;
+    position: sticky;
+    top: 20px;
+  }
+
+  /* ── VERTICAL THUMBNAIL SWIPER (desktop) ── */
+  .nch__thumbs-swiper {
+    width: 80px;
+    /* height matches ~7 thumbs: 80px thumb + 10px gap = 90px per slide */
+    height: calc(100px * 5 + 10px * 4);
+    overflow: hidden;
+  }
+  .nch__thumbs-swiper .swiper-wrapper {
+    flex-direction: column;
+  }
+  .nch__thumbs-swiper .swiper-slide {
+    width: 80px !important;
+    height: 80px !important;
+    flex-shrink: 0;
+  }
+  /* Up/Down nav arrows for thumb swiper */
+  .nch__thumb-nav {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .nch__thumb-arr {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid rgba(35,31,32,0.2);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+  }
+  .nch__thumb-arr:hover {
+    background: #231f20;
+    border-color: #231f20;
+  }
+  .nch__thumb-arr:hover svg {
+    color: #fff;
+  }
+  .nch__thumb-arr svg {
+    width: 14px;
+    height: 14px;
+    color: #231f20;
+  }
+  .nch__thumb-arr.swiper-button-disabled {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+  /* Thumb column wrapper (swiper + arrows) */
+  .nch__thumb-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ── INDIVIDUAL THUMB SLIDE ── */
+  .nch__thumb {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+    border: 2px solid transparent;
+  }
+  .nch__thumb.is-active {
+    opacity: 1;
+    border-color: #231f20;
+  }
+  .nch__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* ── MAIN IMAGE (desktop) ── */
+  .nch__main-image {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 24px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .nch__main-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* ── MOBILE SWIPER (hidden on desktop) ── */
+  .nch__swiper {
+    display: none;
+    overflow: hidden;
+  }
+  .nch__swiper .swiper-slide img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 16px;
+    display: block;
+  }
+  .nch__swiper .swiper-pagination {
+    position: relative;
+    margin-top: 12px;
+  }
+  .nch__swiper .swiper-pagination-bullet {
+    width: 8px;
+    height: 8px;
+    background: #231f20;
+    opacity: 0.25;
+  }
+  .nch__swiper .swiper-pagination-bullet-active {
+    opacity: 1;
+  }
+
+  /* ── RIGHT CONTENT ── */
+  .nch__info {
+    padding-left: 0;
+    max-width: 640px;
+  }
+
+  /* tag + reviews row */
+  .nch__top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+  #shopify-section-{{ section.id }} .nch__tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-style: italic;
+    font-size: 15px;
+    line-height: 1.4;
+    color: {{ section.settings.accent_color | default: '#ca2931' }};
+    background: {{ section.settings.accent_color | default: '#ca2931' | color_modify: 'alpha', 0.24 }};
+    border: 1px solid {{ section.settings.accent_color | default: '#ca2931' }};
+    white-space: nowrap;
+  }
+  .nch__reviews {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #231f20;
+    white-space: nowrap;
+  }
+  .nch__reviews a {
+    text-decoration: underline;
+    color: #231f20;
+  }
+  .nch__stars {
+    display: flex;
+    gap: 2px;
+    color: #231f20;
+  }
+  .nch__stars svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* title */
+  .nch__title {
+    font-family: 'Folk Solid', sans-serif;
+    font-size: 64px;
+    line-height: 1.1;
+    color: #000;
+    text-shadow: 3px 3px 0px {{ section.settings.heading_shadow_color | default: '#fff100' }};
+    margin: 0 0 8px;
+  }
+
+  /* description */
+  .nch__desc {
+    font-size: 16px;
+    line-height: 1.6;
+    color: rgba(35,31,32,0.85);
+    margin: 0 0 16px;
+  }
+  .nch__desc strong {
+    color: #231f20;
+    font-weight: 500;
+  }
+
+  /* ── FEATURES ROW ── */
+  .nch__features {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 16px 0;
+    border-top: 1px solid rgba(35,31,32,0.12);
+    border-bottom: 1px solid rgba(35,31,32,0.12);
+    margin-bottom: 20px;
+  }
+  .nch__feature {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 28px;
+  }
+  .nch__feature:first-child {
+    padding-left: 0;
+  }
+  .nch__feature + .nch__feature {
+    border-left: 1px solid rgba(35,31,32,0.2);
+  }
+  .nch__feature-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  #shopify-section-{{ section.id }} .nch__feature-icon {
+    background: {{ section.settings.accent_color | default: '#ca2931' }};
+  }
+  .nch__feature-icon svg {
+    color: #fff;
+  }
+  .nch__feature-text {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: #231f20;
+    white-space: nowrap;
+  }
+
+  /* ── FLAVOR SELECTOR ── */
+  .nch__flavor-label {
+    font-weight: 600;
+    font-size: 18px;
+    line-height: 1.4;
+    color: #231f20;
+    text-transform: math-auto;
+    margin: 0 0 16px;
+  }
+  .nch__flavors {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .nch__flavor {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .nch__flavor-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+    border: 3px solid transparent;
+  }
+  .nch__flavor.is-active .nch__flavor-img {
+    opacity: 1;
+  }
+  .nch__flavor-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .nch__flavor-name {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: #231f20;
+    opacity: 0.5;
+  }
+  .nch__flavor.is-active .nch__flavor-name {
+    opacity: 1;
+  }
+
+  /* ── PURCHASE BOX ── */
+  #shopify-section-{{ section.id }} .nch__purchase {
+    background: {{ section.settings.purchase_bg_color | default: '#EDE6DD' }};
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+
+  .nch__tab-content {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+  }
+  .nch__tab-content .nch__badge-corner {
+    position: absolute;
+    top: 0;
+    right: 12px;
+    padding: 5px 10px;
+    border-radius: 0 0px 12px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: #fff;
+  }
+  #shopify-section-{{ section.id }} .nch__badge-corner {
+    background: {{ section.settings.accent_color | default: '#ca2931' }};
+  }
+
+  .nch__tab-radio {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    cursor: pointer;
+  }
+  .nch__tab-radio input[type="radio"] {
+    width: 28px;
+    height: 28px;
+    accent-color: #231f20;
+    cursor: pointer;
+  }
+  .nch__tab-radio-label {
+    font-size: 18px;
+    font-weight: 500;
+    color: #000;
+  }
+
+  /* ── Option groups ── */
+  .nch__option-group {
+    margin-bottom: 12px;
+  }
+  .nch__option-label {
+    font-weight: 600;
+    display: none;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #231f20;
+    text-transform: uppercase;
+    margin: 0 0 8px;
+  }
+  .nch__option-select {
+    width: 100%;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 1px solid #000;
+    background: #fff;
+    font-family: "Poppins", sans-serif;
+    font-size: 16px;
+    color: #231f20;
+    appearance: auto;
+    cursor: pointer;
+  }
+
+  .nch__variants {
+    display: flex;
+    gap: 8px;
+  }
+  .nch__variant-radio {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .nch__variant-card {
+    flex: 1;
+    border: 1px solid #000;
+    border-radius: 8px;
+    position: relative;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    max-width: 142px;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .nch__variant-card.is-selected,
+  .nch__variant-card:has(.nch__variant-radio:checked) {
+    background: #EDE7D4;
+    border-width: 2px;
+  }
+  .nch__variant-card__name {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: #000;
+    line-height: 1.4;
+  }
+  .nch__variant-card__price {
+    font-size: 14px;
+    color: rgba(35,31,32,0.85);
+    line-height: 1.4;
+  }
+  .nch__variant-save {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0cad0c;
+    color: #fff;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 2px 10px;
+    border-radius: 8px 8px 0 0;
+    white-space: nowrap;
+  }
+
+  .nch__sub-tab {
+    background: rgba(255,255,255,0.5);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    position: relative;
+  }
+  .nch__sub-tab .nch__badge-corner {
+    position: absolute;
+    top: 0;
+    right: 12px;
+    padding: 5px 10px;
+    border-radius: 0 0px 12px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: math-auto;
+    line-height: 1.4;
+    color: #fff;
+  }
+  .nch__sub-tab-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .nch__sub-save-badge {
+    background: #0cad0c;
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 3px 10px;
+    border-radius: 50px;
+    white-space: nowrap;
+  }
+
+  /* ── BUTTONS ── */
+  .nch__buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .nch__btn-cart {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 40px;
+    border-radius: 50px;
+    background: #231f20;
+    color: #fff;
+    font-family: "Poppins", sans-serif;
+    font-weight: 500;
+    font-size: 18px;
+    line-height: 1.58;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    transition: opacity 0.2s ease;
+  }
+  .nch__btn-cart:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .nch__btn-buy {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 40px;
+    border-radius: 50px;
+    background: #fff100;
+    color: #231f20;
+    font-family: "Poppins", sans-serif;
+    font-weight: 500;
+    font-size: 18px;
+    line-height: 1.58;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+  }
+  .nch__btn-cart:hover {
+    background: #FFF;
+    color: #23201f;
+  }
+  .nch__btn-buy,
+  .nch__btn-cart {
+    transition: 0.3s;
+    border: 1px solid;
+  }
+  .nch__btn-buy {
+    border-color: #fff100;
+  }
+  .nch__btn-buy:hover {
+    background: #23201f;
+    color: #FFF;
+    border-color: #FFF;
+  }
+
+  /* ── SHIPPING ── */
+  .nch__shipping {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(35,31,32,0.12);
+    margin-bottom: 16px;
+  }
+  .nch__shipping-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #231f20;
+  }
+  .nch__shipping-title svg {
+    width: 24px;
+    height: 24px;
+    color: #231f20;
+  }
+  .nch__shipping-detail {
+    font-size: 14px;
+    color: rgba(35,31,32,0.85);
+    padding-left: 32px;
+  }
+
+  /* ── CHAT CTA ── */
+  .nch__chat {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(172,129,110,0.16);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .nch__chat-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 80px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .nch__chat-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .nch__chat-content {
+    flex: 1;
+  }
+  .nch__chat-heading {
+    font-weight: 600;
+    font-size: 18px;
+    line-height: 1.4;
+    color: #231f20;
+    margin: 0;
+  }
+  .nch__chat-sub {
+    font-size: 14px;
+    color: rgba(44,44,44,0.8);
+    margin: 0;
+  }
+  .nch__chat-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    background: #fff;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #231f20;
+    text-transform: math-auto;
+    text-decoration: none;
+    border: none;
+    white-space: nowrap;
+    transition: 0.3s;
+    line-height: 20px;
+  }
+  .nch__chat-btn:hover {
+    background: #000;
+    color: #FFF;
+  }
+  .nch__chat-btn svg {
+    display: none;
+  }
+
+  /* ── ACCORDIONS ── */
+  .nch__accordion {
+    border-bottom: 1px solid rgba(35,31,32,0.12);
+  }
+  .nch__accordion-inner ul {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-left: 4px;
+    gap: 16px;
+  }
+  .nch__accordion-inner ul li {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    position: relative;
+    padding-left: 14px;
+  }
+  .nch__accordion-inner ul li strong {
+    display: flex;
+    color: #231f20;
+  }
+  .nch__accordion-inner ul li:before {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: black;
+    border-radius: 100%;
+    left: 0;
+    top: 18%;
+  }
+  .nch__accordion-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 16px 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: "Poppins", sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    line-height: 1.4;
+    color: #231f20;
+    text-transform: math-auto;
+    text-align: left;
+  }
+  .nch__accordion-chevron {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+    color: #231f20;
+  }
+  .nch__accordion.is-open .nch__accordion-chevron {
+    transform: rotate(180deg);
+  }
+  .nch__accordion-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+  }
+  .nch__accordion.is-open .nch__accordion-body {
+    max-height: 800px;
+  }
+  .nch__accordion-inner {
+    padding: 0 0 16px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: rgba(35,31,32,0.85);
+  }
+
+  /* ── CROSS-SELL ── */
+  .nch__cross-sell-heading {
+    font-weight: 600;
+    font-size: 24px;
+    line-height: 1.4;
+    color: #231f20;
+    text-transform: math-auto;
+    margin: 24px 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .nch__cross-sell-wrap {
+    display: flex;
+  }
+  .nch__bundle-sell-wrap-swiper,
+  .nch__cross-sell-wrap-swiper {
+    overflow: hidden;
+  }
+  .arro.swiper-button-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .arrwslide {
+    display: flex;
+    align-items: center;
+  }
+  .nch__cross-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 8px;
+    flex: none;
+    width: 75%;
+  }
+  .nch__cross-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    height: 100%;
+    padding-bottom: 8px;
+  }
+  .nch__cross-img {
+    width: 93px;
+    height: 93px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .nch__cross-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .nch__cross-info {
+    flex: 1;
+  }
+  .nch__cross-title {
+    font-weight: 600;
+    font-size: 18px;
+    line-height: 1.4;
+    color: #000;
+    margin: 0 0 4px;
+  }
+  .nch__cross-title span {
+    font-weight: 400;
+    font-size: 14px;
+  }
+  .nch__cross-price {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .nch__cross-price-amount {
+    font-weight: 500;
+    font-size: 18px;
+    color: #231f20;
+    text-transform: uppercase;
+  }
+  .nch__cross-price-per {
+    font-size: 14px;
+    color: rgba(35,31,32,0.85);
+  }
+  .nch__cross-add {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    background: #fff100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid #fff100;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  .nch__cross-add:hover {
+    background: #FFF;
+    border-color: #000;
+  }
+  .nch__cross-add svg {
+    width: 24px;
+    height: 24px;
+    color: #231f20;
+  }
+  .nch__cross-card {
+    align-items: flex-start;
+  }
+  .nch__cross-form {
+    display: flex;
+    min-width: 0;
+    align-self: flex-start;
+    margin-top: 4px;
+  }
+  .nch__cross-variants {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .nch__cross-price {
+    margin-top: 10px;
+  }
+  .nch__cross-flavor-select {
+    width: 100%;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(35,31,32,0.2);
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    color: #231f20;
+    background: #fff;
+    cursor: pointer;
+    appearance: auto;
+  }
+  .nch__cross-variant-pills {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .nch__cross-pill {
+    cursor: pointer;
+    flex: none;
+  }
+  .nch__cross-pill span {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid rgba(35,31,32,0.2);
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    color: #231f20;
+    transition: background 0.15s, border-color 0.15s;
+    cursor: pointer;
+  }
+  .nch__cross-pill input:checked + span {
+    background: #231f20;
+    color: #fff;
+    border-color: #231f20;
+  }
+
+  /* ── PRICE BLOCK ── */
+  .nch__price {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .nch__price-current {
+    font-weight: 600;
+    font-size: 28px;
+    line-height: 1.4;
+    color: #231f20;
+  }
+  .nch__price-compare {
+    font-size: 18px;
+    color: rgba(35,31,32,0.5);
+    text-decoration: line-through;
+  }
+  .nch__price-per {
+    font-size: 16px;
+    color: rgba(35,31,32,0.7);
+  }
+  .nch__price-save {
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    background: #0cad0c;
+    padding: 2px 10px;
+    border-radius: 50px;
+  }
+
+  /* ── STICKY ADD TO CART BAR ── */
+  .nch__sticky-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    height: 80px;
+    padding: 0 40px;
+    transform: translateY(100%);
+    transition: transform 0.35s ease;
+  }
+  #shopify-section-{{ section.id }} .nch__sticky-bar {
+    background: {{ section.settings.accent_color | default: '#ca2931' }};
+  }
+  .nch__sticky-bar.is-visible {
+    transform: translateY(0);
+  }
+  .nch__sticky-thumb {
+    width: 72px;
+    height: 72px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .nch__sticky-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .nch__sticky-info {
+    text-align: left;
+  }
+  .nch__sticky-title {
+    font-weight: 600;
+    font-size: 22px;
+    line-height: 1.4;
+    color: #fff;
+    margin: 0;
+  }
+  .nch__sticky-price {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+  .nch__sticky-price-amount {
+    font-weight: 500;
+    font-size: 18px;
+    color: #fff;
+    letter-spacing: -0.18px;
+  }
+  .nch__sticky-price-per {
+    font-size: 14px;
+    color: rgba(255,255,255,0.85);
+  }
+  .nch__sticky-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 240px;
+    padding: 10px 40px;
+    border-radius: 50px;
+    background: #fff100;
+    color: #231f20;
+    font-family: "Poppins", sans-serif;
+    font-weight: 500;
+    font-size: 18px;
+    line-height: 1.58;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .nch__sticky-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ── LAPTOP (1024–1400px) ── */
+  @media only screen and (max-width: 1400px) {
+    .nch__layout {
+      gap: 32px;
+    }
+    .nch__media {
+      grid-template-columns: 70px 1fr;
+      gap: 10px;
+    }
+    .nch__thumb {
+      width: 70px;
+      height: 70px;
+    }
+    .nch__thumbs-swiper {
+      width: 70px;
+      height: calc(100px * 5 + 10px * 4);
+    }
+    .nch__thumbs-swiper .swiper-slide {
+      width: 70px !important;
+      height: 70px !important;
+    }
+    .nch__title {
+      font-size: 48px;
+    }
+  }
+
+  /* ── TABLET (768–1023px) ── */
+  @media only screen and (max-width: 1023px) {
+    .nch__layout {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    .nch_chat-drop.is-open svg.nch__accordion-chevron {
+      rotate: 180deg;
+    }
+    .nch__chat {
+      margin-top: 12px;
+    }
+    .nch_chat-answer {
+      display: none;
+    }
+    .nch_chat-drop {
+      padding: 0px 0px 20px;
+      border-bottom: 1px solid rgba(35,31,32,0.12);
+    }
+    /* hide desktop gallery, show swiper */
+    .nch__media {
+      display: none;
+    }
+    .nch__swiper {
+      display: block;
+    }
+    .nch__title {
+      font-size: 40px;
+      text-align: left;
+    }
+    .nch__top-row {
+      flex-wrap: wrap;
+    }
+  }
+
+  /* ── MOBILE (< 768px) ── */
+  @media only screen and (max-width: 768px) {
+    #shopify-section-{{ section.id }} .nch__purchase {
+      padding: 8px;
+    }
+    #shopify-section-{{ section.id }} .nch__tag {
+      font-size: 13px;
+    }
+    .nch__option-label {
+      margin-bottom: 0;
+    }
+    span.nch__shipping-detail {
+      max-width: 280px;
+    }
+    .nch__container {
+      padding: 0 16px;
+    }
+    .nch__title {
+      font-size: 40px;
+    }
+    .nch__features {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .nch__cross-price {
+      flex-wrap: wrap;
+    }
+    .nch__cross-title {
+      font-size: 16px;
+    }
+    .nch__chat-heading {
+      font-size: 16px;
+    }
+    .nch__cross-price-amount {
+      font-size: 16px;
+    }
+    .nch__feature {
+      padding: 4px 0;
+      border-left: none !important;
+    }
+    .nch__variants {
+      flex-wrap: wrap;
+    }
+    .nch__variant-card {
+      flex: 1 1 calc(50% - 4px);
+    }
+    .nch__buttons {
+      grid-template-columns: 1fr;
+    }
+    .nch__flavor-img {
+      width: 60px;
+      height: 60px;
+    }
+    .nch__flavor-name {
+      font-size: 12px;
+    }
+    .nch__swiper .swiper-slide img {
+      border-radius: 12px;
+    }
+    .nch_chat-answer {
+      display: none;
+    }
+    .nch_chat-drop.is-open .nch_chat-answer {
+      display: block;
+    }
+    .nch__chat {
+      flex-wrap: wrap;
+    }
+    .nch__chat-avatar {
+      width: 40px;
+      height: 40px;
+    }
+    .nch__chat {
+      padding: 8px;
+      gap: 8px;
+      margin-bottom: 8px;
+      border-radius: 12px;
+    }
+    .nch__chat-heading {
+      font-size: 14px;
+    }
+    p.nch__chat-sub {
+      font-size: 11px;
+    }
+    .nch__chat-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 100%;
+      padding: 0;
+    }
+    span.desktext {
+      display: none;
+    }
+    .nch__chat-btn svg {
+      display: block;
+    }
+    .nch__accordion-trigger {
+      font-size: 16px;
+    }
+    .nch__price-current {
+      letter-spacing: -0.8px;
+      font-size: 20px;
+    }
+    .nch__price-compare {
+      font-size: 16px;
+    }
+    .nch__price-per {
+      font-size: 14px;
+    }
+    .nch__cross-sell-heading {
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+    .nch__feature-text,
+    .nch__desc {
+      font-size: 14px;
+    }
+    .nch__features {
+      padding: 12px 0px;
+    }
+    .nch__feature-icon {
+      width: 16px;
+      height: 16px;
+    }
+    .nch__feature {
+      gap: 6px;
+    }
+    .nch__variant-card__name {
+      font-size: 16px;
+    }
+    .nch__variant-card__price {
+      font-size: 12px;
+    }
+    .nch__variants {
+      display: flex;
+      flex-wrap: nowrap;
+      padding-top: 20px;
+      overflow: auto;
+      scrollbar-width: none;
+    }
+    .nch__variant-card {
+      flex: none;
+    }
+    .nch__sub-tab .nch__badge-corner,
+    .nch__tab-content .nch__badge-corner {
+      font-size: 12px;
+      right: 10px;
+      border-radius: 0px 0px 8px 8px;
+      padding: 3px 10px;
+    }
+    span.nch__tab-radio-label {
+      font-size: 16px;
+    }
+    .nch__tab-radio input[type="radio"] {
+      width: 20px;
+    }
+    .nch__tab-radio {
+      margin-bottom: 0;
+    }
+    .nch__sub-tab-left input[type="radio"] {
+      width: 20px !important;
+      height: 40px !important;
+    }
+    span.nch__sub-save-badge {
+      font-size: 12px;
+    }
+    .nch__sub-tab {
+      padding: 18px 10px 16px;
+    }
+    .nch__cross-card {
+      flex: none;
+      width: 85%;
+      margin: 0;
+    }
+    .nch__cross-sell-wrap {
+      width: 100%;
+    }
+    .nch__info {
+      width: 100%;
+      overflow: hidden;
+    }
+    .nch__cross-img {
+      width: 60px;
+      height: 60px;
+    }
+    .nch__cross-title {
+      font-size: 14px;
+    }
+    .nch__cross-price-amount {
+      font-size: 14px;
+    }
+    span.nch__cross-price-per {
+      font-size: 12px;
+    }
+    .nch__cross-add {
+      width: 40px;
+      height: 40px;
+    }
+    span.nch__shipping-detail {
+      max-width: 280px;
+    }
+    .nch__accordion-inner {
+      font-size: 14px;
+    }
+    .nch__accordion-inner strong {
+      margin-top: 10px;
+      display: block;
+    }
+    .nch__accordion-inner ul {
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .nch__sticky-bar {
+      height: 80px;
+      padding: 0 16px;
+      gap: 12px;
+    }
+    .nch__sticky-thumb {
+      width: 52px;
+      height: 52px;
+    }
+    .nch__sticky-title {
+      font-size: 16px;
+    }
+    .nch__sticky-price-amount {
+      font-size: 14px;
+    }
+    .nch__sticky-price-per {
+      font-size: 12px;
+    }
+    .nch__sticky-btn {
+      width: auto;
+      padding: 8px 20px;
+      font-size: 14px;
+    }
+    .nch__sticky-info {
+      text-align: left;
+    }
+    .nch__sticky-price {
+      justify-content: flex-start;
+    }
+  }
+
+  @media only screen and (max-width: 450px) {
+    .nch__variant-card__name {
+      font-size: 14px;
+    }
+    .nch__variant-card__price {
+      font-size: 11px;
+    }
+    .nch__variants {
+      padding-top: 14px;
+      overflow: visible;
+    }
+    .nch__option-group {
+      margin-bottom: 0;
+    }
+    .nch__variant-save {
+      font-size: 11px;
+      top: -20px;
+    }
+    .nch__variant-card {
+      max-width: 31.5%;
+      width: 100%;
+      padding: 12px 6px;
+    }
+    .nch__tab-content {
+      padding: 16px 10px;
+    }
+    .nch__tab-radio input[type="radio"] {
+      height: 20px;
+    }
+    .nch__sub-tab-left input[type="radio"] {
+      height: 30px !important;
+    }
+  }
+
+  @media only screen and (max-width: 425px) {
+    .nch__cross-pill span {
+      padding: 6px 8px;
+      font-size: 11px;
+    }
+    .nch__feature-text,
+    .nch__desc {
+      font-size: 12px;
+    }
+    .nch__cross-card {
+      width: 99%;
+    }
+    .nch__cross-flavor-select {
+      font-size: 12px;
+    }
+  }
+
+  /* ── MOBILE PADDING (always last) ── */
+  @media only screen and (max-width: 768px) {
+    #shopify-section-{{ section.id }} .nch {
+      padding-top: {{ section.settings.mobile_padding_top }}px !important;
+      padding-bottom: {{ section.settings.mobile_padding_bottom }}px !important;
+    }
+  }
+{% endstyle %}
+
+<data-island
+  class="nch"
+  style="padding-top: {{ section.settings.padding_top }}px; padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.color_background != blank %} background-color: {{ section.settings.color_background }};{% endif %}"
+  x-data="
+    Product({
+      product: {{ product | json | escape }},
+      variant: {
+        ...{{ current_variant | json | escape }},
+        metafields: {
+          custom: {
+            pack_qty: {{ current_variant.metafields.custom.pack_qty | default: 1 }}
+          }
+        }
+      },
+      featuredMediaID: {{ featured_media.id | json }},
+      template: {{ template | json | escape }},
+      thumbnailsPosition: 'left',
+      showThumbnailsOnMobile: false,
+    })
+  "
+  src="product"
+  data-product-root="{{ section.id }}"
+>
+  <div class="nch__container">
+    <div class="nch__layout">
+
+      {%- comment -%} ── DESKTOP MEDIA: Vertical thumb Swiper + main image ── {%- endcomment -%}
+      <div class="nch__media">
+
+        {%- comment -%} Thumb column: up arrow + swiper + down arrow {%- endcomment -%}
+        <div class="nch__thumb-col">
+          {%- comment -%} Up arrow {%- endcomment -%}
+          <button class="nch__thumb-arr" id="nch-thumb-prev-{{ section.id }}" aria-label="Previous image">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="18 15 12 9 6 15"/>
+            </svg>
+          </button>
+
+          {%- comment -%} Vertical Swiper container {%- endcomment -%}
+          <div class="nch__thumbs-swiper swiper" id="nch-thumbs-{{ section.id }}">
+            <div class="swiper-wrapper">
+              {%- for media in product.media -%}
+                <div class="swiper-slide">
+                  <div
+                    class="nch__thumb{% if media.id == featured_media.id %} is-active{% endif %}"
+                    data-nch-thumb="{{ forloop.index0 }}"
+                    data-media-id="{{ media.id }}"
+                  >
+                    {{ media | image_url: width: 200 | image_tag: loading: 'lazy' }}
+                  </div>
+                </div>
+              {%- endfor -%}
+            </div>
+          </div>
+
+          {%- comment -%} Down arrow {%- endcomment -%}
+          <button class="nch__thumb-arr" id="nch-thumb-next-{{ section.id }}" aria-label="Next image">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+        </div>
+
+        {%- comment -%} Main image ── {%- endcomment -%}
+        <div class="nch__main-image" data-nch-main-img>
+          {%- for media in product.media -%}
+            <img
+              src="{{ media | image_url: width: 1500 }}"
+              alt="{{ media.alt | escape }}"
+              loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
+              style="cursor:zoom-in;{% unless media.id == featured_media.id %}display:none{% endunless %}"
+              data-nch-img="{{ media.id }}"
+              @click.prevent="openZoom('{{ media.id }}')"
+            >
+          {%- endfor -%}
+        </div>
+      </div>
+
+      {%- comment -%} ── MOBILE/TABLET SWIPER ── {%- endcomment -%}
+      <div class="nch__swiper">
+        <div class="swiper" data-nch-swiper>
+          <div class="swiper-wrapper">
+            {%- for media in product.media -%}
+              <div class="swiper-slide">
+                <img
+                  src="{{ media | image_url: width: 1000 }}"
+                  alt="{{ media.alt | escape }}"
+                  loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
+                  style="cursor:zoom-in;"
+                  @click.prevent="openZoom('{{ media.id }}')"
+                >
+              </div>
+            {%- endfor -%}
+          </div>
+          <div class="swiper-pagination"></div>
+        </div>
+      </div>
+
+      {%- comment -%} ── RIGHT CONTENT ── {%- endcomment -%}
+      <div class="nch__info">
+
+        {%- comment -%} Tag + Reviews {%- endcomment -%}
+        <div class="nch__top-row">
+          {%- if section.settings.tag_text != blank -%}
+            <span class="nch__tag">{{ section.settings.tag_text }}</span>
+          {%- endif -%}
+          <div class="nch__reviews">
+            <a href="#judgeme_product_reviews">
+              <div class="jdgm-widget jdgm-preview-badge rating-star">
+                {{ product.metafields.judgeme.badge }}
+              </div>
+            </a>
+          </div>
+        </div>
+
+        {%- comment -%} Title {%- endcomment -%}
+        <h1 class="nch__title">{{ product.title }}</h1>
+
+        {%- comment -%} Description {%- endcomment -%}
+        {%- if section.settings.short_description != blank -%}
+          <div class="nch__desc">{{ section.settings.short_description }}</div>
+        {%- endif -%}
+
+        {%- comment -%} Price block {%- endcomment -%}
+        <div class="nch__price">
+          <span class="nch__price-current" x-html="formatMoney(currentPrice)">{{ current_variant.price | money }}</span>
+          <span
+            class="nch__price-compare"
+            x-show="currentVariantHasCompareAtPrice"
+            x-html="currentVariantHasCompareAtPrice ? formatMoney(currentVariant.compare_at_price) : ''"
+          >
+            {%- if current_variant.compare_at_price > current_variant.price -%}
+              {{ current_variant.compare_at_price | money }}
+            {%- endif -%}
+          </span>
+          <span class="nch__price-per" x-text="'(' + formatMoney(Math.round(currentPrice / packQty)) + ' per {{ price_unit }})'">
+            {%- assign init_qty = current_variant.metafields.custom.pack_qty | default: 1 -%}
+            {%- assign init_per = current_variant.price | divided_by: init_qty -%}
+            ({{ init_per | money }} per {{ price_unit }})
+          </span>
+          <span
+            class="nch__price-save"
+            x-show="currentVariantHasCompareAtPrice"
+            x-text="'Save ' + Math.round((1 - currentPrice / currentVariant.compare_at_price) * 100) + '%'"
+          >
+            {%- if current_variant.compare_at_price > current_variant.price -%}
+              Save {{ current_variant.compare_at_price | minus: current_variant.price | times: 100 | divided_by: current_variant.compare_at_price }}%
+            {%- endif -%}
+          </span>
+        </div>
+
+        {%- comment -%} App blocks {%- endcomment -%}
+        {%- assign app_blocks = section.blocks | where: 'type', '@app' -%}
+        {%- for block in app_blocks -%}
+          <div {{ block.shopify_attributes }}>{% render block %}</div>
+        {%- endfor -%}
+
+        {%- comment -%} Feature badges {%- endcomment -%}
+        {%- assign features = product.metafields.custom.product_hero_tag.value -%}
+        {%- if features != blank -%}
+          <div class="nch__features">
+            {%- for feature in features -%}
+              <div class="nch__feature">
+                <div class="nch__feature-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="24" height="24" rx="12" fill="#CA2931"/>
+                    <g clip-path="url(#clip0_295_1132)">
+                      <path d="M7.83276 11.5559C7.62566 11.5565 7.42295 11.6157 7.24809 11.7267C7.07323 11.8376 6.93337 11.9959 6.84468 12.183C6.75599 12.3702 6.7221 12.5786 6.74693 12.7842C6.77176 12.9898 6.85429 13.1842 6.98499 13.3449L9.77106 16.7578C9.8704 16.8811 9.99773 16.979 10.1425 17.0433C10.2872 17.1075 10.4452 17.1363 10.6034 17.1272C10.9415 17.1091 11.2468 16.9282 11.4415 16.6307L17.2289 7.31016C17.2298 7.3086 17.2308 7.30706 17.2318 7.30554C17.2861 7.22216 17.2685 7.05693 17.1564 6.95313C17.1256 6.92463 17.0893 6.90273 17.0498 6.88878C17.0102 6.87484 16.9682 6.86914 16.9263 6.87204C16.8845 6.87495 16.8437 6.88639 16.8064 6.90567C16.7691 6.92494 16.7362 6.95164 16.7096 6.98413C16.7075 6.98668 16.7054 6.98919 16.7032 6.99167L10.8665 13.5862C10.8443 13.6113 10.8174 13.6318 10.7872 13.6463C10.757 13.6609 10.7243 13.6694 10.6908 13.6712C10.6573 13.673 10.6238 13.6681 10.5923 13.6569C10.5607 13.6456 10.5317 13.6282 10.5069 13.6057L8.56982 11.8429C8.36863 11.6585 8.10568 11.5561 7.83276 11.5559Z" fill="white"/>
+                    </g>
+                    <defs>
+                      <clipPath id="clip0_295_1132">
+                        <rect width="12" height="12" fill="white" transform="translate(6 6)"/>
+                      </clipPath>
+                    </defs>
+                  </svg>
+                </div>
+                <span class="nch__feature-text">{{ feature }}</span>
+              </div>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} Flavor selector {%- endcomment -%}
+        {%- if related_products != blank or section.settings.show_flavor_selector -%}
+          <p class="nch__flavor-label">Select flavor</p>
+          <div class="nch__flavors">
+            <a class="nch__flavor is-active" href="{{ product.url }}">
+              <div class="nch__flavor-img">
+                {%- if product.metafields.custom.variant_image != blank -%}
+                  <img src="{{ product.metafields.custom.variant_image | image_url: width: 200 }}" alt="{{ product.title }}" loading="lazy">
+                {%- elsif product.featured_image -%}
+                  <img src="{{ product.featured_image | image_url: width: 200 }}" alt="{{ product.title }}" loading="lazy">
+                {%- endif -%}
+              </div>
+              <span class="nch__flavor-name">{{ product.metafields.custom.name | default: product.title | truncate: 12 }}</span>
+            </a>
+            {%- if related_products != blank -%}
+              {%- for related in related_products -%}
+                <a class="nch__flavor" href="{{ related.url }}">
+                  <div class="nch__flavor-img">
+                    {%- if related.metafields.custom.variant_image != blank -%}
+                      <img src="{{ related.metafields.custom.variant_image | image_url: width: 200 }}" alt="{{ related.title }}" loading="lazy">
+                    {%- elsif related.featured_image -%}
+                      <img src="{{ related.featured_image | image_url: width: 200 }}" alt="{{ related.title }}" loading="lazy">
+                    {%- endif -%}
+                  </div>
+                  <span class="nch__flavor-name">{{ related.metafields.custom.name | default: related.title | truncate: 12 }}</span>
+                </a>
+              {%- endfor -%}
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} ══ PURCHASE BOX ══ {%- endcomment -%}
+        <div class="nch__purchase" data-nch-purchase>
+          <div class="nch__tab-content" data-nch-onetime-panel>
+            <span class="nch__badge-corner">{{ section.settings.onetime_badge | default: 'Most Picked' }}</span>
+            <label class="nch__tab-radio">
+              <input type="radio" name="nch-purchase-type" value="onetime" checked data-nch-tab="onetime">
+              <span class="nch__tab-radio-label">One Time</span>
+            </label>
+            {%- unless product.has_only_default_variant -%}
+              {%- assign dropdown_options = "flavour,flavor,taste" | split: "," -%}
+              {%- for option in product.options_with_values -%}
+                {%- liquid
+                  assign option_downcase = option.name | downcase
+                  assign is_dropdown = false
+                  for flavor_word in dropdown_options
+                    if option_downcase contains flavor_word
+                      assign is_dropdown = true
+                      break
+                    endif
+                  endfor
+                -%}
+                <div class="nch__option-group">
+                  <p class="nch__option-label">{{ option.name }}</p>
+                  {%- if is_dropdown -%}
+                    <select class="nch__option-select" @change="optionChange" data-single-option-selector data-position="{{ option.position }}">
+                      {%- for value in option.values -%}
+                        <option value="{{ value | escape }}" {% if option.selected_value == value %}selected{% endif %}>{{ value }}</option>
+                      {%- endfor -%}
+                    </select>
+                  {%- else -%}
+                    <div class="nch__variants">
+                      {%- for value in option.values -%}
+                        {%- liquid
+                          assign matched_variant = product.variants | where: "title", value | first
+                          assign v_pack_qty = blank
+                          assign v_save = 0
+                          assign v_per = blank
+                          if matched_variant
+                            assign v_pack_qty = matched_variant.metafields.custom.pack_qty | default: 1
+                            assign v_per = matched_variant.price | divided_by: v_pack_qty
+                            if matched_variant.compare_at_price > matched_variant.price
+                              assign v_save = matched_variant.compare_at_price | minus: matched_variant.price | times: 100 | divided_by: matched_variant.compare_at_price
+                            endif
+                          endif
+                        -%}
+                        <div class="nch__variant-card">
+                          {%- if v_save > 0 -%}
+                            <div class="nch__variant-save">Save {{ v_save }}%</div>
+                          {%- endif -%}
+                          <input
+                            type="radio"
+                            class="nch__variant-radio"
+                            name="Section-{{ section.id }}-options[{{ option.name }}]"
+                            value="{{ value | escape }}"
+                            {% if option.selected_value == value %}checked{% endif %}
+                            @change="optionChange"
+                            data-single-option-selector
+                            data-position="{{ option.position }}"
+                            {% if v_pack_qty != blank %}
+                              data-pack-qty="{{ v_pack_qty }}"
+                            {% else %}
+                              data-pack-qty="{{ value | replace: 'Pack of', '' | strip }}"
+                            {% endif %}
+                          >
+                          <div class="nch__variant-card__name">{{ value }}</div>
+                          {%- if v_per != blank -%}
+                            <div class="nch__variant-card__price">({{ v_per | money }}/{{ price_unit }})</div>
+                          {%- endif -%}
+                        </div>
+                      {%- endfor -%}
+                    </div>
+                  {%- endif -%}
+                </div>
+              {%- endfor -%}
+            {%- endunless -%}
+          </div>
+          <div class="nch__sub-tab" data-nch-tab="subscribe">
+            <span class="nch__badge-corner">{{ section.settings.subscribe_badge | default: 'Most Popular' }}</span>
+            <div class="nch__sub-tab-left">
+              <input type="radio" name="nch-purchase-type" value="subscribe" style="width:28px;height:28px;accent-color:#231f20;cursor:pointer;">
+              <span class="nch__tab-radio-label">Subscribe</span>
+              {%- assign sub_per_unit = product.metafields.custom.subscribe_price_per_unit.value -%}
+{%- assign show_discount = product.metafields.custom.subscribe_badge_show_discount.value -%}
+{%- if sub_per_unit != blank and show_discount != true -%}
+  <span class="nch__sub-save-badge" style="text-transform:none !important">(₹{{ sub_per_unit }} /{{ price_unit | capitalize }})</span>
+{%- else -%}
+  <span class="nch__sub-save-badge">Save upto 30%</span>
+{%- endif -%}
+            </div>
+          </div>
+        </div>
+
+        {%- comment -%} ══ PRODUCT FORM ══ {%- endcomment -%}
+        {% form 'product', product, id: product_form_id, data-product-form: '', data-product-handle: product.handle, data-enable-history-state: 'true', x-ref: 'productForm' %}
+          <div class="{% if product.has_only_default_variant %}hidden{% else %}no-js{% endif %}" style="display:none">
+            <select x-ref="singleVariantSelector" name="id">
+              {%- for variant in product.variants -%}
+                <option
+                  {% if variant == current_variant %}selected{% endif %}
+                  {% unless variant.available %}disabled{% endunless %}
+                  x-bind:selected="currentVariantId === {{ variant.id }}"
+                  value="{{ variant.id }}"
+                >{{ variant.title }}</option>
+              {%- endfor -%}
+            </select>
+          </div>
+          <div class="nch__buttons">
+            <button class="nch__btn-cart" type="submit" :disabled="!currentVariantAvailable" x-text="addToCartText">
+              {%- if current_variant.available -%}ADD TO CART{%- else -%}SOLD OUT{%- endif -%}
+            </button>
+            {%- if product.selected_or_first_available_variant.available -%}
+             <button
+  type="button"
+  class="nch__btn-buy"
+  id="flo-buy-now-button"
+  onclick="document.querySelector('[name=&quot;checkout&quot;]')?.click();">
+  Buy it now
+</button>
+            {%- endif -%}
+          </div>
+        {% endform %}
+
+        {%- comment -%} Shipping {%- endcomment -%}
+        <div class="nch__shipping">
+          <div class="nch__shipping-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            <span>{{ section.settings.shipping_title | default: 'Free & fast shipping' }}</span>
+          </div>
+          <span class="nch__shipping-detail">{{ section.settings.shipping_detail | default: ' · 48-hr delivery in Bangalore & NCR · All India delivery available' }}</span>
+        </div>
+
+        {%- comment -%} Chat CTA {%- endcomment -%}
+        {%- if section.settings.chat_heading != blank -%}
+          <div class="nch__chat">
+            {%- if section.settings.chat_avatar != blank -%}
+              <div class="nch__chat-avatar">
+                {{ section.settings.chat_avatar | image_url: width: 120 | image_tag: loading: 'lazy' }}
+              </div>
+            {%- endif -%}
+            <div class="nch__chat-content">
+              <p class="nch__chat-heading">{{ section.settings.chat_heading }}</p>
+              <p class="nch__chat-sub">{{ section.settings.chat_sub | default: 'Our team usually replies within 2 hours' }}</p>
+            </div>
+            <a href="{{ section.settings.chat_url | default: 'https://api.whatsapp.com/send/?phone=919632441463' }}" target="_blank" class="nch__chat-btn">
+              <span class="desktext">Talk with us</span>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18.3706 14.6C17.8244 14.1419 14.6206 12.1131 14.0881 12.2063C13.8381 12.2506 13.6469 12.4638 13.135 13.0744C12.8983 13.3749 12.6383 13.6564 12.3575 13.9163C11.843 13.792 11.345 13.6074 10.8738 13.3663C9.0258 12.4666 7.53289 10.9732 6.63375 9.125C6.39265 8.65379 6.20804 8.15576 6.08375 7.64125C6.34358 7.36044 6.62507 7.10047 6.92563 6.86375C7.53562 6.35188 7.74938 6.16187 7.79375 5.91062C7.88688 5.37687 5.85625 2.17437 5.4 1.62813C5.20875 1.40188 5.035 1.25 4.8125 1.25C4.1675 1.25 1.25 4.8575 1.25 5.325C1.25 5.36313 1.3125 9.11875 6.05562 13.9444C10.8813 18.6875 14.6369 18.75 14.675 18.75C15.1425 18.75 18.75 15.8325 18.75 15.1875C18.75 14.965 18.5981 14.7913 18.3706 14.6ZM14.375 9.375H15.625C15.6235 8.04937 15.0962 6.77847 14.1589 5.84111C13.2215 4.90375 11.9506 4.37649 10.625 4.375V5.625C11.6193 5.62599 12.5725 6.0214 13.2756 6.72445C13.9786 7.42749 14.374 8.38074 14.375 9.375Z" fill="black"/>
+                <path d="M17.5 9.375H18.75C18.7475 7.22088 17.8907 5.15569 16.3675 3.6325C14.8443 2.1093 12.7791 1.25248 10.625 1.25V2.5C12.4477 2.50215 14.1951 3.22717 15.484 4.51602C16.7728 5.80486 17.4978 7.5523 17.5 9.375Z" fill="black"/>
+              </svg>
+            </a>
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} Accordions {%- endcomment -%}
+        {%- assign accordion_blocks = section.blocks | where: 'type', 'accordion' -%}
+        {%- if accordion_blocks.size > 0 or product.description != blank -%}
+          <div class="nch__accordions" data-nch-accordions>
+            {%- for block in accordion_blocks -%}
+              <div class="nch__accordion" {{ block.shopify_attributes }}>
+                <button class="nch__accordion-trigger" data-nch-acc-trigger aria-expanded="false">
+                  <span>{{ block.settings.title }}</span>
+                  <svg class="nch__accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="nch__accordion-body">
+                  <div class="nch__accordion-inner">{{ block.settings.content }}</div>
+                </div>
+              </div>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} Cross-sell {%- endcomment -%}
+        {%- assign cross_sell_products = product.metafields.custom.cross_sell.value -%}
+        {%- if cross_sell_products != blank -%}
+          <div class="nch__cross-sell-heading">
+            {{ section.settings.cross_sell | default:'You may also like this' }}
+            <div class="arrwslide">
+              <div class="arro is-prev">{% render 'arrow-prev' %}</div>
+              <div class="arro is-next">{% render 'arrow-next' %}</div>
+            </div>
+          </div>
+          <div class="nch__cross-sell-wrap-swiper">
+            <div class="nch__cross-sell-wrap">
+              {%- for cs_product in cross_sell_products -%}
+                {%- if cs_product != blank -%}
+                  {%- assign cs_first_variant = cs_product.selected_or_first_available_variant -%}
+                  {%- assign cs_form_id = 'nch-cs-form-' | append: section.id | append: '-' | append: cs_product.id -%}
+                  <div class="nch__cross-card" {{ block.shopify_attributes }}>
+                    <data-island class="contents" x-data="QuickBuy({ product: { id: {{ cs_product.id }}, options: {{ cs_product.options | json | escape }}, variants: {{ cs_product.variants | json | escape }} }, variant: { ...{{ cs_first_variant | json | escape }}, metafields: { custom: { pack_qty: {{ cs_first_variant.metafields.custom.pack_qty | default: 1 }} } } }, featuredMediaID: {{ cs_product.featured_image.id | json }} })" src="{{ 'island-quick-buy.bundle.js' | asset_url }}" data-product-root="cs-{{ section.id }}-{{ cs_product.id }}">
+                      <div class="nch__cross-img">
+                        {%- if cs_product.featured_image -%}
+                          {{ cs_product.featured_image | image_url: width: 200 | image_tag: loading: 'lazy' }}
+                        {%- endif -%}
+                      </div>
+                      <div class="nch__cross-info">
+                        <p class="nch__cross-title">{{ cs_product.title }}</p>
+                        {%- unless cs_product.has_only_default_variant -%}
+                          <div class="nch__cross-variants">
+                            {%- for option in cs_product.options_with_values -%}
+                              {%- liquid
+                                assign cs_opt_lower = option.name | downcase
+                                assign cs_is_flavor = false
+                                if cs_opt_lower contains 'flavour' or cs_opt_lower contains 'flavor' or cs_opt_lower contains 'taste'
+                                  assign cs_is_flavor = true
+                                endif
+                                assign cs_opt_prop = 'option' | append: option.position
+                                assign cs_opt_current = cs_first_variant[cs_opt_prop]
+                              -%}
+                              {%- if cs_is_flavor -%}
+                                <select class="nch__cross-flavor-select" data-single-option-selector data-index="option{{ option.position }}" @change="optionChange">
+                                  {%- for value in option.values -%}
+                                    <option value="{{ value | escape }}" {% if cs_opt_current == value %}selected{% endif %}>{{ value }}</option>
+                                  {%- endfor -%}
+                                </select>
+                              {%- else -%}
+                                <div class="nch__cross-variant-pills">
+                                  {%- for value in option.values -%}
+                                    <label class="nch__cross-pill">
+                                      <input type="radio" name="nch-cs-opt{{ option.position }}-{{ cs_product.id }}" value="{{ value | escape }}" {% if cs_opt_current == value %}checked{% endif %} class="sr-only" data-single-option-selector data-index="option{{ option.position }}" @change="optionChange">
+                                      <span>{{ value }}</span>
+                                    </label>
+                                  {%- endfor -%}
+                                </div>
+                              {%- endif -%}
+                            {%- endfor -%}
+                          </div>
+                        {%- endunless -%}
+                        <div class="nch__cross-price">
+                          <span class="nch__cross-price-amount" x-html="formatMoney(currentPrice)">{{ cs_first_variant.price | money }}</span>
+                          {%- assign cs_qty = cs_first_variant.metafields.custom.pack_qty | default: 1 -%}
+                          {%- if cs_qty > 1 -%}
+                            {%- assign cs_per = cs_first_variant.price | divided_by: cs_qty -%}
+                            <span class="nch__cross-price-per">({{ cs_per | money }} per {{ price_unit }})</span>
+                          {%- endif -%}
+                        </div>
+                      </div>
+                      {% form 'product', cs_product, id: cs_form_id, data-product-form: '', data-product-handle: cs_product.handle, class: 'nch__cross-form quick-buy-product-form', x-ref: 'productForm' %}
+                        <select x-ref="singleVariantSelector" name="id" style="display:none">
+                          {%- for variant in cs_product.variants -%}
+                            <option {% if variant == cs_first_variant %}selected{% endif %} {% unless variant.available %}disabled{% endunless %} x-bind:selected="currentVariantId === {{ variant.id }}" value="{{ variant.id }}">{{ variant.title }}</option>
+                          {%- endfor -%}
+                        </select>
+                        <button type="submit" class="nch__cross-add" :disabled="!currentVariantAvailable" aria-label="Add to cart">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        </button>
+                      {% endform %}
+                    </data-island>
+                  </div>
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} Bundle sell {%- endcomment -%}
+        {%- assign bundle_sell_products = product.metafields.custom.bundle_sell.value -%}
+        {%- if bundle_sell_products.size > 0 -%}
+          <div class="nch__cross-sell-heading">
+            {{ section.settings.bundle_sell | default:'Try them all. Find your favorite.' }}
+            <div class="arrwslide">
+              <div class="arro is-prevs">{% render 'arrow-prev' %}</div>
+              <div class="arro is-nexts">{% render 'arrow-next' %}</div>
+            </div>
+          </div>
+          <div class="nch__bundle-sell-wrap-swiper">
+            <div class="nch__cross-sell-wrap">
+              {%- for cs_product in bundle_sell_products -%}
+                {%- if cs_product != blank -%}
+                  {%- assign cs_first_variant = cs_product.selected_or_first_available_variant -%}
+                  {%- assign cs_form_id = 'nch-bs-form-' | append: section.id | append: '-' | append: cs_product.id -%}
+                  <div class="nch__cross-card" {{ block.shopify_attributes }}>
+                    <data-island class="contents" x-data="QuickBuy({ product: { id: {{ cs_product.id }}, options: {{ cs_product.options | json | escape }}, variants: {{ cs_product.variants | json | escape }} }, variant: { ...{{ cs_first_variant | json | escape }}, metafields: { custom: { pack_qty: {{ cs_first_variant.metafields.custom.pack_qty | default: 1 }} } } }, featuredMediaID: {{ cs_product.featured_image.id | json }} })" src="{{ 'island-quick-buy.bundle.js' | asset_url }}" data-product-root="bs-{{ section.id }}-{{ cs_product.id }}">
+                      <div class="nch__cross-img">
+                        {%- if cs_product.featured_image -%}
+                          {{ cs_product.featured_image | image_url: width: 200 | image_tag: loading: 'lazy' }}
+                        {%- endif -%}
+                      </div>
+                      <div class="nch__cross-info">
+                        <p class="nch__cross-title">{{ cs_product.title }}</p>
+                        {%- unless cs_product.has_only_default_variant -%}
+                          <div class="nch__cross-variants">
+                            {%- for option in cs_product.options_with_values -%}
+                              {%- liquid
+                                assign cs_opt_lower = option.name | downcase
+                                assign cs_is_flavor = false
+                                if cs_opt_lower contains 'flavour' or cs_opt_lower contains 'flavor' or cs_opt_lower contains 'taste'
+                                  assign cs_is_flavor = true
+                                endif
+                                assign cs_opt_prop = 'option' | append: option.position
+                                assign cs_opt_current = cs_first_variant[cs_opt_prop]
+                              -%}
+                              {%- if cs_is_flavor -%}
+                                <select class="nch__cross-flavor-select" data-single-option-selector data-index="option{{ option.position }}" @change="optionChange">
+                                  {%- for value in option.values -%}
+                                    <option value="{{ value | escape }}" {% if cs_opt_current == value %}selected{% endif %}>{{ value }}</option>
+                                  {%- endfor -%}
+                                </select>
+                              {%- else -%}
+                                <div class="nch__cross-variant-pills">
+                                  {%- for value in option.values -%}
+                                    <label class="nch__cross-pill">
+                                      <input type="radio" name="nch-bs-opt{{ option.position }}-{{ cs_product.id }}" value="{{ value | escape }}" {% if cs_opt_current == value %}checked{% endif %} class="sr-only" data-single-option-selector data-index="option{{ option.position }}" @change="optionChange">
+                                      <span>{{ value }}</span>
+                                    </label>
+                                  {%- endfor -%}
+                                </div>
+                              {%- endif -%}
+                            {%- endfor -%}
+                          </div>
+                        {%- endunless -%}
+                        <div class="nch__cross-price">
+                          <span class="nch__cross-price-amount" x-html="formatMoney(currentPrice)">{{ cs_first_variant.price | money }}</span>
+                          {%- assign cs_qty = cs_first_variant.metafields.custom.pack_qty | default: 1 -%}
+                          {%- if cs_qty > 1 -%}
+                            {%- assign cs_per = cs_first_variant.price | divided_by: cs_qty -%}
+                            <span class="nch__cross-price-per">({{ cs_per | money }} per {{ price_unit }})</span>
+                          {%- endif -%}
+                        </div>
+                      </div>
+                      {% form 'product', cs_product, id: cs_form_id, data-product-form: '', data-product-handle: cs_product.handle, class: 'nch__cross-form quick-buy-product-form', x-ref: 'productForm' %}
+                        <select x-ref="singleVariantSelector" name="id" style="display:none">
+                          {%- for variant in cs_product.variants -%}
+                            <option {% if variant == cs_first_variant %}selected{% endif %} {% unless variant.available %}disabled{% endunless %} x-bind:selected="currentVariantId === {{ variant.id }}" value="{{ variant.id }}">{{ variant.title }}</option>
+                          {%- endfor -%}
+                        </select>
+                        <button type="submit" class="nch__cross-add" :disabled="!currentVariantAvailable" aria-label="Add to cart">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        </button>
+                      {% endform %}
+                    </data-island>
+                  </div>
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+          </div>
+        {%- endif -%}
+
+      </div>{%- comment -%} /.nch__info {%- endcomment -%}
+    </div>
+  </div>
+
+  {%- comment -%} ── STICKY ADD TO CART BAR ── {%- endcomment -%}
+  {%- assign sticky_variant = product.selected_or_first_available_variant -%}
+  {%- assign sticky_qty = sticky_variant.metafields.custom.pack_qty | default: 1 -%}
+  {%- assign sticky_per = sticky_variant.price | divided_by: sticky_qty -%}
+  <div class="nch__sticky-bar" data-nch-sticky>
+    <div class="nch__sticky-thumb">
+      {%- if product.featured_image -%}
+        <img src="{{ product.featured_image | image_url: width: 160 }}" alt="{{ product.title }}" loading="lazy">
+      {%- endif -%}
+    </div>
+    <div class="nch__sticky-info">
+      <p class="nch__sticky-title">{{ product.title }}</p>
+      <div class="nch__sticky-price">
+        <span class="nch__sticky-price-amount" x-html="formatMoney(currentPrice)">{{ sticky_variant.price | money }}</span>
+        <span class="nch__sticky-price-per" x-text="'(' + formatMoney(Math.round(currentPrice / packQty)) + ' per {{ price_unit }})'">({{ sticky_per | money }} per {{ price_unit }})</span>
+      </div>
+    </div>
+    <button class="nch__sticky-btn" type="button" :disabled="!currentVariantAvailable" data-nch-sticky-atc>Add to Cart</button>
+  </div>
+
+  {%- comment -%} PhotoSwipe zoom popup {%- endcomment -%}
+  {% render 'photoswipe' %}
+
+</data-island>
+
+<script>
+(function(){
+  var sectionId = '{{ section.id }}';
+  var root = document.querySelector('[data-product-root="' + sectionId + '"]');
+  if (!root) return;
+
+  /* ────────────────────────────────────────────
+     DESKTOP: Vertical thumbnail Swiper
+  ──────────────────────────────────────────── */
+  var thumbSwiperEl = document.getElementById('nch-thumbs-' + sectionId);
+  var thumbPrevBtn  = document.getElementById('nch-thumb-prev-' + sectionId);
+  var thumbNextBtn  = document.getElementById('nch-thumb-next-' + sectionId);
+  var mainImages    = root.querySelectorAll('[data-nch-img]');
+  var thumbSlides   = root.querySelectorAll('[data-nch-thumb]');
+
+  var thumbSwiper = null;
+
+  function initThumbSwiper() {
+    if (window.innerWidth > 1023 && thumbSwiperEl && !thumbSwiper) {
+      thumbSwiper = new Swiper(thumbSwiperEl, {
+        direction: 'vertical',        /* ← KEY: vertical slide */
+        slidesPerView: 'auto',        /* respect CSS height per slide */
+        spaceBetween: 10,
+        freeMode: false,
+        watchSlidesProgress: true,
+        navigation: {
+          prevEl: thumbPrevBtn,
+          nextEl: thumbNextBtn,
+        },
+        on: {
+          /* keep arrow disabled states in sync */
+          init: updateThumbArrows,
+          slideChange: updateThumbArrows,
+        }
+      });
+
+      /* click on thumb → swap main image */
+      thumbSlides.forEach(function(thumb) {
+        thumb.addEventListener('click', function() {
+          var mediaId = thumb.getAttribute('data-media-id');
+
+          /* update active class */
+          thumbSlides.forEach(function(t) { t.classList.remove('is-active'); });
+          thumb.classList.add('is-active');
+
+          /* swap main image */
+          mainImages.forEach(function(img) {
+            img.style.display = (img.getAttribute('data-nch-img') === mediaId) ? '' : 'none';
+          });
+
+          /* slide thumb into view */
+          var idx = parseInt(thumb.getAttribute('data-nch-thumb'), 10);
+          if (thumbSwiper) thumbSwiper.slideTo(idx);
+        });
+      });
+    } else if (window.innerWidth <= 1023 && thumbSwiper) {
+      thumbSwiper.destroy(true, true);
+      thumbSwiper = null;
+    }
+  }
+
+  function updateThumbArrows() {
+    if (!thumbSwiper) return;
+    if (thumbPrevBtn) thumbPrevBtn.classList.toggle('swiper-button-disabled', thumbSwiper.isBeginning);
+    if (thumbNextBtn) thumbNextBtn.classList.toggle('swiper-button-disabled', thumbSwiper.isEnd);
+  }
+
+  /* init once DOM is ready */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initThumbSwiper);
+  } else {
+    initThumbSwiper();
+  }
+  window.addEventListener('resize', initThumbSwiper);
+
+  /* ────────────────────────────────────────────
+     MOBILE/TABLET: Horizontal product image Swiper
+  ──────────────────────────────────────────── */
+  var swiperEl = root.querySelector('[data-nch-swiper]');
+  var mobileSwiper = null;
+
+  function initMobileSwiper() {
+    if (window.innerWidth <= 1023 && swiperEl && !mobileSwiper) {
+      mobileSwiper = new Swiper(swiperEl, {
+        slidesPerView: 1,
+        spaceBetween: 12,
+        pagination: {
+          el: swiperEl.querySelector('.swiper-pagination'),
+          clickable: true
+        }
+      });
+    } else if (window.innerWidth > 1023 && mobileSwiper) {
+      mobileSwiper.destroy(true, true);
+      mobileSwiper = null;
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMobileSwiper);
+  } else {
+    initMobileSwiper();
+  }
+  window.addEventListener('resize', initMobileSwiper);
+
+  /* ────────────────────────────────────────────
+     Subscribe tab → popup
+  ──────────────────────────────────────────── */
+  var subTab = root.querySelector('[data-nch-tab="subscribe"]');
+  var onetimeRadio = root.querySelector('[data-nch-tab="onetime"]');
+  if (subTab) {
+    subTab.addEventListener('click', function() {
+      if (onetimeRadio) onetimeRadio.checked = true;
+      if (window.Alpine && window.Alpine.store('modals')) {
+        window.Alpine.store('modals').open('product-popup-subscribe');
+      }
+    });
+  }
+
+  /* ────────────────────────────────────────────
+     Sticky add-to-cart bar
+  ──────────────────────────────────────────── */
+  var stickyBar = root.querySelector('[data-nch-sticky]');
+  var mainButtons = root.querySelector('.nch__buttons');
+  var stickyAtcBtn = root.querySelector('[data-nch-sticky-atc]');
+  var mainForm = root.querySelector('form[data-product-form]');
+
+  if (stickyBar && mainButtons) {
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        stickyBar.classList.toggle('is-visible', !entry.isIntersecting);
+      });
+    }, { root: null, threshold: 0 });
+    observer.observe(mainButtons);
+  }
+
+  if (stickyAtcBtn && mainForm) {
+    stickyAtcBtn.addEventListener('click', function() {
+      var submitBtn = mainForm.querySelector('button[type="submit"]');
+      if (submitBtn && !submitBtn.disabled) submitBtn.click();
+    });
+  }
+
+  /* ────────────────────────────────────────────
+     Accordions
+  ──────────────────────────────────────────── */
+  var accTriggers = root.querySelectorAll('[data-nch-acc-trigger]');
+  accTriggers.forEach(function(trigger) {
+    trigger.addEventListener('click', function() {
+      var accordion = trigger.closest('.nch__accordion');
+      var isOpen = accordion.classList.contains('is-open');
+      root.querySelectorAll('.nch__accordion').forEach(function(a) {
+        a.classList.remove('is-open');
+        a.querySelector('[data-nch-acc-trigger]').setAttribute('aria-expanded', 'false');
+      });
+      if (!isOpen) {
+        accordion.classList.add('is-open');
+        trigger.setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
+})();
+
+/* Cross-sell & Bundle-sell Swipers */
+document.addEventListener('DOMContentLoaded', function() {
+  new Swiper('.nch__cross-sell-wrap-swiper', {
+    slidesPerView: 'auto',
+    spaceBetween: 10,
+    wrapperClass: 'nch__cross-sell-wrap',
+    slideClass: 'nch__cross-card',
+    navigation: { nextEl: '.is-next', prevEl: '.is-prev' },
+  });
+  new Swiper('.nch__bundle-sell-wrap-swiper', {
+    slidesPerView: 'auto',
+    spaceBetween: 10,
+    wrapperClass: 'nch__cross-sell-wrap',
+    slideClass: 'nch__cross-card',
+    navigation: { nextEl: '.is-nexts', prevEl: '.is-prevs' },
+  });
+});
+</script>
+
+<script type="application/ld+json">
+  {{ product | structured_data }}
+</script>
+
+{% schema %}
+{
+  "name": "Coffee Hero",
+  "tag": "section",
+  "class": "nuvie-coffee-hero-section",
+  "settings": [
+    { "type": "text", "id": "tag_text", "label": "Tag Badge Text", "default": "Meet India's first caffeinated protein shake" },
+    { "type": "text", "id": "review_text", "label": "Review Link Text", "default": "120 Reviews" },
+    { "type": "richtext", "id": "short_description", "label": "Short Description", "default": "<p>Your cold coffee. Same taste. 20g protein built in. And yes, it's <strong>completely lactose free.</strong></p>" },
+    { "type": "checkbox", "id": "show_flavor_selector", "label": "Show Flavor Selector", "default": true },
+    { "type": "header", "content": "Purchase Box" },
+    { "type": "text", "id": "onetime_badge", "label": "One Time Badge", "default": "Most Picked" },
+    { "type": "text", "id": "subscribe_badge", "label": "Subscribe Badge", "default": "Most Popular" },
+    { "type": "color", "id": "purchase_bg_color", "label": "Purchase Box Background", "default": "#f2e9c6" },
+    { "type": "color", "id": "accent_color", "label": "Accent Color", "default": "#ca2931" },
+    { "type": "header", "content": "Shipping" },
+    { "type": "text", "id": "shipping_title", "label": "Shipping Title", "default": "Free & fast shipping" },
+    { "type": "text", "id": "shipping_detail", "label": "Shipping Detail", "default": " · 48-hr delivery in Bangalore & NCR · All India delivery available" },
+    { "type": "header", "content": "Chat CTA" },
+    { "type": "image_picker", "id": "chat_avatar", "label": "Chat Avatar" },
+    { "type": "text", "id": "chat_heading", "label": "Chat Heading", "default": "Got a question about your order?" },
+    { "type": "text", "id": "chat_sub", "label": "Chat Subtext", "default": "Our team usually replies within 2 hours" },
+    { "type": "url", "id": "chat_url", "label": "Chat Link" },
+    { "type": "text", "label": "Cross Sell Title", "id": "cross_sell" },
+    { "type": "text", "label": "Bundle Sell Title", "id": "bundle_sell" },
+    { "type": "header", "content": "Style" },
+    { "type": "color", "id": "heading_shadow_color", "label": "Heading Shadow Color", "default": "#fff100" },
+    { "type": "header", "content": "Padding" },
+    { "type": "range", "id": "padding_top", "min": 0, "max": 220, "step": 4, "unit": "px", "label": "Desktop Padding Top", "default": 48 },
+    { "type": "range", "id": "padding_bottom", "min": 0, "max": 220, "step": 4, "unit": "px", "label": "Desktop Padding Btm", "default": 48 },
+    { "type": "range", "id": "mobile_padding_top", "min": 0, "max": 120, "step": 4, "unit": "px", "label": "Mobile Padding Top", "default": 20 },
+    { "type": "range", "id": "mobile_padding_bottom", "min": 0, "max": 120, "step": 4, "unit": "px", "label": "Mobile Padding Btm", "default": 20 },
+    { "type": "color", "id": "color_text", "label": "Text Color" },
+    { "type": "color", "id": "color_background", "label": "Background Color", "default": "#ffffff" }
+  ],
+  "blocks": [
+    { "type": "feature", "name": "Feature Badge", "settings": [{ "type": "text", "id": "text", "label": "Feature Text", "default": "Lactose free" }] },
+    { "type": "accordion", "name": "Accordion", "settings": [{ "type": "text", "id": "title", "label": "Title", "default": "Ingredients" }, { "type": "richtext", "id": "content", "label": "Content", "default": "<p>Details about ingredients...</p>" }] },
+    { "type": "cross_sell", "name": "Cross-sell Product", "settings": [{ "type": "product", "id": "product", "label": "Product" }] },
+    { "type": "bundle_sell", "name": "Bundle-sell Product", "settings": [{ "type": "product", "id": "product", "label": "Product" }] },
+    { "type": "title", "name": "Product Title", "limit": 1, "settings": [] },
+    { "type": "price", "name": "Price", "limit": 1, "settings": [] },
+    { "type": "description", "name": "Description", "limit": 1, "settings": [] },
+    { "type": "variant_picker", "name": "Variant Picker", "limit": 1, "settings": [] },
+    { "type": "buy_buttons", "name": "Buy Buttons", "limit": 1, "settings": [{ "type": "checkbox", "id": "show_price", "label": "Show price on button", "default": true }, { "type": "checkbox", "id": "enable_payment_button", "label": "Show dynamic checkout button", "default": true }] },
+    { "type": "icon_row", "name": "Icon Row", "settings": [{ "type": "text", "id": "text_1", "label": "Text 1" }, { "type": "text", "id": "text_2", "label": "Text 2" }, { "type": "text", "id": "text_3", "label": "Text 3" }, { "type": "text", "id": "text_4", "label": "Text 4" }] },
+    { "type": "custom_liquid", "name": "Custom Liquid", "settings": [{ "type": "liquid", "id": "custom_liquid", "label": "Custom Liquid" }] },
+    { "type": "@app" }
+  ],
+  "presets": [
+    {
+      "name": "Coffee Hero",
+      "settings": {
+        "tag_text": "Meet India's first caffeinated protein shake",
+        "short_description": "<p>Your cold coffee. Same taste. 20g protein built in. And yes, it's <strong>completely lactose free.</strong></p>",
+        "color_background": "#ffffff"
+      },
+      "blocks": [
+        { "type": "feature", "settings": { "text": "Lactose free" } },
+        { "type": "feature", "settings": { "text": "No added sugar" } },
+        { "type": "feature", "settings": { "text": "4.5g Fibre" } },
+        { "type": "accordion", "settings": { "title": "Ingredients", "content": "<p>Toned milk, Milk Protein Concentrate, Instant coffee powder, Dietary fibre, Cocoa powder, Permitted Flavour.</p>" } },
+        { "type": "accordion", "settings": { "title": "Storage & Shelf-life", "content": "<p>Store in a cool and dry place. Best consumed chilled. Consume within 24 hours of opening.</p>" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

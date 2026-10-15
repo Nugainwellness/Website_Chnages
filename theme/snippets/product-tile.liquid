@@ -1,0 +1,431 @@
+{%- liquid
+  assign first_variant = product.selected_or_first_available_variant
+  assign featured_media = first_variant.featured_media | default: product.featured_media
+  assign hover_image = blank
+  if product.media.size > 1
+    assign hover_image = product.media[1]
+  endif
+  assign accent_color = product.metafields.custom.accent_color | default: '#ca2931'
+  assign pack_qty = first_variant.metafields.custom.pack_qty.value | default: 1
+  assign tag_color = product.metafields.custom.tag_color.value | default: accent_color
+  assign unit_label = 'bottle'
+  if product.type contains 'bar'
+    assign unit_label = 'bar'
+  endif
+
+  unless loading
+    assign loading = 'lazy'
+  endunless
+-%}
+
+{%- liquid
+  assign show_atc = enable_atc | default: settings.product_tile_show_atc
+  assign product_form_id = 'product-tile-form-' | append: section.id | append: '-' | append: product.id
+-%}
+{% unless product_card_css_loaded %}
+  {{ 'product-card.css' | asset_url | stylesheet_tag: preload: true }}
+  {% assign product_card_css_loaded = true %}
+{% endunless %}
+{% unless product_tile_js_loaded %}
+<script>
+(function () {
+  function openPanel(tile) {
+    var panel = tile.querySelector('.product-tile__ctas');
+    var wrap  = tile.querySelector('.product-tile__cta_wrap');
+    if (!panel) return;
+    panel.style.opacity       = '1';
+    panel.style.pointerEvents = 'auto';
+    if (wrap) wrap.style.transform = 'translateY(0%)';
+  }
+  function closePanel(tile) {
+    var panel = tile.querySelector('.product-tile__ctas');
+    var wrap  = tile.querySelector('.product-tile__cta_wrap');
+    if (!panel) return;
+    panel.style.opacity       = '0';
+    panel.style.pointerEvents = 'none';
+    if (wrap) wrap.style.transform = 'translateY(100%)';
+  }
+
+  document.addEventListener('click', function (e) {
+    /* ── Open: tap the ATC button (mobile only) ── */
+    var atcBtn = e.target.closest('.Atc-button');
+    var varBtn = e.target.closest('.product_v-wrap');
+    if (atcBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (window.innerWidth <= 749) {
+        var tile = atcBtn.closest('.product-tile');
+        if (tile) openPanel(tile);
+      }
+      return;
+    }
+
+    if (varBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (window.innerWidth <= 749) {
+        var tile = varBtn.closest('.product-tile');
+        if (tile) openPanel(tile);
+      }
+      return;
+    }
+
+    /* ── Close: tap the × button ── */
+    var closeBtn = e.target.closest('.ptile-close-btn');
+    if (closeBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      var tile = closeBtn.closest('.product-tile');
+      if (tile) closePanel(tile);
+      return;
+    }
+  });
+})();
+</script>
+{% assign product_tile_js_loaded = true %}
+{% endunless %}
+{%- if product and product != empty -%}
+  <div class="product-tile {{ class }}" style="--accent: {{ accent_color }}; --tag-color: {{ tag_color }};">
+    {%- if show_atc and first_variant.available -%}
+      <data-island
+        class="contents"
+        x-data="
+          QuickBuy({
+            product: {{ product | json | escape }},
+            variant: {
+              ...{{ first_variant | json | escape }},
+              metafields: {
+                custom: {
+                  pack_qty: {{ first_variant.metafields.custom.pack_qty | default: 1 }}
+                }
+              }
+            },
+            featuredMediaID: {{ featured_media.id | json }}
+          })
+        "
+        src="{{ 'island-quick-buy.bundle.js' | asset_url }}"
+        data-product-root="{{ section.id }}-{{ product.id }}"
+      >
+    {%- endif -%}
+    <a href="{{ product.url | within: collection }}" class="product-tile__link">
+
+      {%- comment -%} Image with hover swap {%- endcomment -%}
+      <div class="product-tile__media">
+        {%- if featured_media -%}
+          {{ featured_media | image_url: width: 800 | image_tag:
+            class: 'product-tile__img product-tile__img--primary',
+            loading: loading,
+            widths: '200, 400, 600, 800',
+            sizes: '(min-width: 1024px) 25vw, 50vw'
+          }}
+          {%- if hover_image != blank -%}
+            {{ hover_image | image_url: width: 800 | image_tag:
+              class: 'product-tile__img product-tile__img--hover',
+              loading: 'lazy',
+              widths: '200, 400, 600, 800',
+              sizes: '(min-width: 1024px) 25vw, 50vw'
+            }}
+          {%- endif -%}
+        {%- endif -%}
+
+        {%- comment -%} Badge from metafield {%- endcomment -%}
+        {%- liquid
+          assign metafield_namespace = settings.product_tile_metafield_badge | split: '.' | first
+          assign metafield_key = settings.product_tile_metafield_badge | split: '.' | last
+          assign metafield_badge = product.metafields[metafield_namespace][metafield_key]
+        -%}
+        {%- if metafield_badge != blank -%}
+          <span class="product-tile__badge">{{ metafield_badge.value }}</span>
+        {%- endif -%}
+        <div class="Atc-button is-desktop">
+          {% if product.selected_or_first_available_variant.available %}
+            <span>Add to Cart</span>
+          {% else %}
+            <span>Sold Out</span>
+          {% endif %}
+
+          {% render 'cart-icon' %}
+        </div>
+      </div>
+
+      <div class="product-tile__info">
+        <div class="product-info-top">
+        {%- comment -%} Judge.me Star Rating {%- endcomment -%}
+        <div class="product-tile__rating">
+          <div class="jdgm-widget jdgm-preview-badge rating-star">
+            {{ product.metafields.judgeme.badge }}
+          </div>
+        </div>
+
+        {%- comment -%} Title {%- endcomment -%}
+        <h3 class="product-tile__title">{{ product.title | escape }}</h3>
+
+        {%- comment -%} Tags from Metaobject {%- endcomment -%}
+        {%- if product.metafields.custom.product_tags.value != blank -%}
+          <div class="product-tile__tags">
+            {%- for tag in product.metafields.custom.product_tags.value -%}
+              <span class="product-tile__tag">{{ tag }}</span>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} First variant price + name {%- endcomment -%}
+        <div class="product-tile__price-row">
+<span class="product-tile__price-amount">
+  {{ first_variant.price | money }}
+</span>
+
+          {% comment %} {%- if first_variant.title != 'Default Title' -%}
+            <span class="product-tile__variant-name">
+              ({{ first_variant.title }})
+            </span>
+          {%- elsif pack_qty > 1 -%}
+            <span class="product-tile__variant-name">
+              (Pack of {{ pack_qty }})
+            </span>
+          {%- endif -%} {% endcomment %}
+
+          <!-- ✅ PER BOTTLE PRICE (DYNAMIC) -->
+{%- assign init_qty = first_variant.metafields.custom.pack_qty.value | default: 1 -%}
+{%- assign init_per = first_variant.price | divided_by: init_qty -%}
+
+<span class="product-tile__variant-name product-tile__per-price">
+  ({{ init_per | money }} per {{ unit_label }})
+</span>
+        </div>
+          <div class="product_v-wrap">
+          {%- comment -%} Flavour dropdown + pack pills {%- endcomment -%}
+            {%- unless product.has_only_default_variant -%}
+              {%- for option in product.options_with_values -%}
+                {%- liquid
+                  assign opt_lower = option.name | downcase
+                  assign is_flavor = false
+                  if opt_lower contains 'flavour' or opt_lower contains 'flavor' or opt_lower contains 'taste'
+                    assign is_flavor = true
+                  endif
+                  assign opt_prop = 'option' | append: option.position
+                  assign opt_current = first_variant[opt_prop]
+                -%}
+
+                {%- if is_flavor -%}
+
+                {%- else -%}
+                  {%- comment -%} Everything else → pills {%- endcomment -%}
+                  <div class="ptile-variants">
+                    {%- for value in option.values -%}
+                      <label class="ptile-variant-pill">
+                        <input
+                          type="radio"
+                          name="ptile-opt{{ option.position }}-{{ product.id }}"
+                          value="{{ value | escape }}"
+                          {% if opt_current == value %}checked{% endif %}
+                          class="sr-only"
+                          data-single-option-selector
+                          data-index="option{{ option.position }}"
+                          @change="optionChange"
+                        >
+                        <span>{{ value }}</span>
+                      </label>
+                    {%- endfor -%}
+                  </div>
+                {%- endif -%}
+
+              {%- endfor -%}
+            {%- endunless -%}
+          </div>
+        </div>
+        {%- comment -%} CTAs {%- endcomment -%}
+      </div>
+      <div class="Atc-button is-mobile">
+          <span>Add to Cart</span>
+          {% render 'cart-icon' %}
+      </div>
+    </a>
+
+    {%- if show_atc and first_variant.available -%}
+    {%- comment -%} ══ PURCHASE PANEL (slides up on hover, outside <a>) ══ {%- endcomment -%}
+    <div class="product-tile__ctas">
+      <div class="product-tile__cta_wrap" style="background:{{ product.metafields.custom.tag_color }}">
+      {%- comment -%} Close button (mobile only) {%- endcomment -%}
+      <button class="ptile-close-btn" aria-label="Close panel" type="button">&#10005;</button>
+      {%- comment -%} Header: accent bg with title + price {%- endcomment -%}
+      <div class="ptile-header">
+        <p class="ptile-header-title">{{ product.title | escape }}</p>
+<div class="ptile-header-price">
+
+  <!-- MAIN PRICE -->
+  <span
+    class="ptile-header-price-current"
+    x-html="formatMoney(currentPrice)"
+  >
+    {{ first_variant.price | money }}
+  </span>
+
+  <!-- COMPARE PRICE -->
+  <s
+    class="ptile-header-price-compare"
+    x-show="currentVariant && currentVariant.compare_at_price > currentVariant.price"
+    x-html="currentVariant ? formatMoney(currentVariant.compare_at_price) : ''"
+    {%- unless first_variant.compare_at_price > first_variant.price %}style="display:none"{% endunless %}
+  >
+    {{ first_variant.compare_at_price | money }}
+  </s>
+
+</div>
+      </div>
+
+      {%- comment -%} White purchase box {%- endcomment -%}
+      <div class="ptile-purchase">
+
+        {%- comment -%} ONE TIME tab {%- endcomment -%}
+        <div class="ptile-tab ptile-tab--onetime">
+          <div class="ptile-tab-row">
+            <span class="ptile-radio ptile-radio--checked"></span>
+            <span class="ptile-tab-label">One Time</span>
+            {%- if first_variant.metafields.custom.pack_qty.value != blank -%}
+              {%- comment -%} Pack products: price per bottle/bar for the selected pack {%- endcomment -%}
+              {%- assign onetime_per_unit = first_variant.price | divided_by: pack_qty | divided_by: 100.0 | round -%}
+              <span
+                class="ptile-save-badge"
+                style="text-transform:none !important"
+                x-show="currentVariant"
+                x-text="'(₹' + Math.round(currentPrice / Number([...$refs.singleVariantSelector.options].find(o => o.value == currentVariantId)?.dataset.packqty || 1) / 100) + ' /{{ unit_label | capitalize }})'"
+              >(₹{{ onetime_per_unit }} /{{ unit_label | capitalize }})</span>
+            {%- else -%}
+              <span
+                class="ptile-save-badge"
+                x-show="currentVariant && currentVariant.compare_at_price > currentVariant.price"
+                x-text="currentVariant && currentVariant.compare_at_price > currentVariant.price ? 'Save ' + Math.round((currentVariant.compare_at_price - currentVariant.price) * 100 / currentVariant.compare_at_price) + '%' : ''"
+                {%- unless first_variant.compare_at_price > first_variant.price %} style="display:none"{% endunless %}
+              ></span>
+            {%- endif -%}
+          </div>
+          {%- comment -%} Flavour dropdown + pack pills {%- endcomment -%}
+          {%- unless product.has_only_default_variant -%}
+            {%- for option in product.options_with_values -%}
+              {%- liquid
+                assign opt_lower = option.name | downcase
+                assign is_flavor = false
+                if opt_lower contains 'flavour' or opt_lower contains 'flavor' or opt_lower contains 'taste'
+                  assign is_flavor = true
+                endif
+                assign opt_prop = 'option' | append: option.position
+                assign opt_current = first_variant[opt_prop]
+              -%}
+
+              {%- if is_flavor -%}
+                {%- comment -%} Flavour → dropdown select {%- endcomment -%}
+                <select
+                  class="ptile-flavor-select"
+                  data-single-option-selector
+                  data-index="option{{ option.position }}"
+                  @change="optionChange"
+                >
+                  {%- for value in option.values -%}
+                    <option
+                      value="{{ value | escape }}"
+                      {% if opt_current == value %}selected{% endif %}
+                    >{{ value }}</option>
+                  {%- endfor -%}
+                </select>
+
+              {%- else -%}
+                {%- comment -%} Everything else → pills {%- endcomment -%}
+                <div class="ptile-variants">
+                  {%- for value in option.values -%}
+                    <label class="ptile-variant-pill">
+                      <input
+                        type="radio"
+                        name="ptile-opt{{ option.position }}-{{ product.id }}"
+                        value="{{ value | escape }}"
+                        {% if opt_current == value %}checked{% endif %}
+                        class="sr-only"
+                        data-single-option-selector
+                        data-index="option{{ option.position }}"
+                        @change="optionChange"
+                      >
+                      <span>{{ value }}</span>
+                    </label>
+                  {%- endfor -%}
+                </div>
+              {%- endif -%}
+
+            {%- endfor -%}
+          {%- endunless -%}
+        </div>
+
+        <div class="ptile-divider"></div>
+
+        {%- comment -%} SUBSCRIBE & SAVE tab – opens the subscribe modal {%- endcomment -%}
+        <div
+          class="ptile-tab ptile-tab--subscribe"
+          @click.prevent.stop="$store.modals?.popup !== undefined ? $store.modals.open('product-popup-subscribe') : (window.location.href = '{{ product.url | within: collection }}')"
+        >
+          <div class="ptile-tab-row">
+            <span class="ptile-radio"></span>
+            <span class="ptile-tab-label">Subscribe</span>
+            {%- assign sub_per_unit = product.metafields.custom.subscribe_price_per_unit.value -%}
+            {%- assign show_discount = product.metafields.custom.subscribe_badge_show_discount.value -%}
+            {%- if sub_per_unit != blank and show_discount != true -%}
+              <span class="ptile-save-badge" style="text-transform:none !important">(₹{{ sub_per_unit }} /{{ unit_label | capitalize }})</span>
+            {%- else -%}
+              <span class="ptile-save-badge">{{ product.metafields.custom.subscribe_save_text | default: 'Save 15%' }}</span>
+            {%- endif -%}
+          </div>
+        </div>
+
+      </div>
+
+      {%- comment -%} CTA buttons {%- endcomment -%}
+      <div class="ptile-cta-row">
+        <a href="{{ product.url | within: collection }}" class="ptile-btn ptile-btn--dark">View Product</a>
+
+        {%- comment -%} Add to Cart form (uses QuickBuy Alpine context from data-island) {%- endcomment -%}
+        {% form 'product', product,
+          id: product_form_id,
+          data-product-form: '',
+          data-product-handle: product.handle,
+          data-enable-history-state: 'true',
+          class: 'ptile-form quick-buy-product-form',
+          x-ref: 'productForm'
+        %}
+        <select x-ref="singleVariantSelector" name="id" style="display:none">
+          {%- for variant in product.variants -%}
+            <option
+              value="{{ variant.id }}"
+              data-packqty="{{ variant.metafields.custom.pack_qty.value | default: 1 }}"
+              {% if variant == first_variant %}selected{% endif %}
+              {% unless variant.available %}disabled{% endunless %}
+              x-bind:selected="currentVariantId === {{ variant.id }}"
+            >
+              {{ variant.title }}
+            </option>
+          {%- endfor -%}
+        </select>
+          <button
+            type="submit"
+            class="ptile-btn ptile-btn--yellow"
+            :disabled="!currentVariantAvailable"
+          ><span x-text="addToCartText">{{ 'products.product.add_to_cart' | t }}</span></button>
+        {% endform %}
+      </div>
+      </div>
+    </div>
+    {%- endif -%}
+
+    </data-island>
+  </div>
+
+{%- else -%}
+  <div class="product-tile {{ class }}">
+    <div class="product-tile__link">
+      <div class="product-tile__media">
+        {{ 'product-1' | placeholder_svg_tag: 'product-tile__img product-tile__img--primary' }}
+      </div>
+      <div class="product-tile__info">
+        <h3 class="product-tile__title">{{ 'sections.onboarding.product_title' | t }}</h3>
+        <span class="product-tile__cta">View Product</span>
+      </div>
+    </div>
+  </div>
+{%- endif -%}
